@@ -10,6 +10,7 @@ class SpeechApp {
         this.clearBtn = document.getElementById('clear-btn');
         this.copyBtn = document.getElementById('copy-btn');
         this.suggestionContainer = null;
+        this.liveSuggestTimer = null;
         this.createSuggestionUI();
 
         this.init();
@@ -99,6 +100,25 @@ class SpeechApp {
         }
 
         this.updateInterimTranscript(interimTranscript);
+
+        // Live Suggestion Logic: Dynamic debounce based on length
+        const fullTranscript = Array.from(this.transcriptContainer.querySelectorAll('.transcript-line:not(.interim)'))
+            .map(el => el.textContent)
+            .join(' ') + ' ' + interimTranscript;
+
+        const trimmedTranscript = fullTranscript.trim();
+        if (trimmedTranscript.length > 15) {
+            clearTimeout(this.liveSuggestTimer);
+
+            // Shorter debounce for longer text as user is likely in the middle of a description
+            const debounceTime = trimmedTranscript.length > 100 ? 800 : 1200;
+
+            this.liveSuggestTimer = setTimeout(() => {
+                console.log("Fetching live suggestions for:", trimmedTranscript);
+                this.showThinkingState();
+                this.fetchSuggestions(trimmedTranscript);
+            }, debounceTime);
+        }
     }
 
     addFinalTranscript(text) {
@@ -116,7 +136,25 @@ class SpeechApp {
 
         this.transcriptContainer.appendChild(p);
         this.scrollToBottom();
-        this.fetchSuggestions(text);
+
+        this.showThinkingState();
+        this.fetchSuggestions(fullTranscript);
+    }
+
+    showThinkingState() {
+        if (this.suggestionContainer) {
+            const existingThinking = this.suggestionContainer.querySelector('.thinking');
+            if (!existingThinking) {
+                const thinking = document.createElement('div');
+                thinking.className = 'thinking';
+                thinking.textContent = 'Thinking...';
+                thinking.style.color = '#888';
+                thinking.style.fontSize = '0.9rem';
+                thinking.style.fontStyle = 'italic';
+                thinking.style.padding = '10px';
+                this.suggestionContainer.appendChild(thinking);
+            }
+        }
     }
 
     async fetchSuggestions(text) {
@@ -129,9 +167,20 @@ class SpeechApp {
                 body: JSON.stringify({ transcript: text }),
             });
             const data = await response.json();
+
+            // Remove thinking state before displaying results
+            if (this.suggestionContainer) {
+                const thinking = this.suggestionContainer.querySelector('.thinking');
+                if (thinking) thinking.remove();
+            }
+
             this.displaySuggestions(data.suggestions);
         } catch (err) {
             console.error('Failed to fetch suggestions', err);
+            if (this.suggestionContainer) {
+                const thinking = this.suggestionContainer.querySelector('.thinking');
+                if (thinking) thinking.remove();
+            }
         }
     }
 
