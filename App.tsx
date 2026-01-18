@@ -30,7 +30,6 @@ const App: React.FC = () => {
   // Logic for implicit split (50/40/10)
   // This is called when new suggestions arrive replacing old ones, or session ends with pending suggestions
   const processImplicitSplit = useCallback((ctx: SuggestionContext) => {
-    // Weights: 0.5, 0.4, 0.1 based on order (assuming model confidence order)
     const weights = [0.5, 0.4, 0.1];
     ctx.words.forEach((word, idx) => {
       addLog(word, ctx.category, weights[idx] || 0.1, 'implicit_split');
@@ -52,10 +51,6 @@ const App: React.FC = () => {
         },
         onConfirmedWord: (word) => {
            // Find category from current context or default to 'Unknown'
-           // We need access to state, so using functional update pattern might be tricky inside callback
-           // Using a ref or simply current state access in closure (since this recreates on state change isn't ideal for service)
-           // Actually, the service instance is stable. We need to be careful.
-           // For simplicity, we search the current suggestionCtx in the setter to ensure freshness
            setSuggestionCtx(current => {
              const category = current?.category || 'General';
              addLog(word, category, 1.0, 'voice_confirmed');
@@ -72,14 +67,14 @@ const App: React.FC = () => {
     }
   };
 
-  const handleStopSession = async () => {
+  const handleStopSession = async () => { //TODO
     if (geminiRef.current) {
       await geminiRef.current.disconnect();
       geminiRef.current = null;
     }
     setIsRecording(false);
     
-    // If there were pending suggestions, log them as split
+    // If there were pending suggestions, log them as split 
     if (suggestionCtx) {
       processImplicitSplit(suggestionCtx);
       setSuggestionCtx(null);

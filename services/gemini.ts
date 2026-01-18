@@ -9,7 +9,7 @@ import {
 import { createPCMBlob, decodeBase64, decodeAudioData, outputAudioContextOptions, audioContextOptions } from "../utils/audio";
 
 // Tool Definitions
-const suggestWordsTool: FunctionDeclaration = {
+const provideSuggestionsTool: FunctionDeclaration = {
     name: "provideSuggestions",
     description: "Call this tool when the user is describing a word but cannot retrieve it (anomia). Provide 3 distinct noun suggestions and a general category.",
     parameters: {
@@ -55,11 +55,8 @@ export class GeminiService {
     private ai: GoogleGenAI;
     private session: Session | null = null;
     private inputAudioContext: AudioContext | null = null;
-    private outputAudioContext: AudioContext | null = null;
     private scriptProcessor: ScriptProcessorNode | null = null;
     private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
-    private outputNode: AudioNode | null = null;
-    private nextStartTime: number = 0;
     private props: GeminiServiceProps;
     private currentStream: MediaStream | null = null;
 
@@ -75,10 +72,6 @@ export class GeminiService {
     async connect() {
         try {
             this.inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)(audioContextOptions);
-            this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)(outputAudioContextOptions);
-
-            this.outputNode = this.outputAudioContext.createGain();
-            this.outputNode.connect(this.outputAudioContext.destination);
 
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 throw new Error("Microphone access is not supported. Please ensure you are using a secure connection (HTTPS or localhost) and a supported browser.");
@@ -91,15 +84,12 @@ export class GeminiService {
                 config: {
                     responseModalities: [Modality.AUDIO],
                     systemInstruction: `You are an empathetic Speech Language Pathology assistant for a person with Anomic Aphasia.
-          Your main task is to listen to the user and identify when they are struggling to find a specific word (they might describe it, use circumlocution, or pause).
-          
-          Protocol:
-          1. Listen silently and patiently. Do not interrupt normal speech.
-          2. If you detect Anomia (description instead of the noun), immediately call the function 'provideSuggestions' with 3 guesses and a Category.
-          3. After offering suggestions, listen. If the user says one of those words, call 'confirmSelection' with that word.
-          4. If the user selects a word, offer a brief, encouraging phrase (e.g., "Great job," "That's it").
-          5. Keep your spoken audio responses very brief and warm. Focus on the tools.`,
-                    tools: [{ functionDeclarations: [suggestWordsTool, confirmSelectionTool] }],
+                        Your main task is to listen to the user and identify when they are struggling to find a specific word (they might describe it, use circumlocution, or pause).
+
+                        Protocol:
+                        1. If you detect Anomia (description instead of the noun), or when the user says a word like "okay", "yes", or "yeah", immediately call the function 'provideSuggestions' with 3 guesses and a Category.
+                        2. After offering suggestions, if the user says one of those words, call 'confirmSelection' with that word.`,
+                    tools: [{ functionDeclarations: [provideSuggestionsTool, confirmSelectionTool] }],
                 },
                 callbacks: {
                     onopen: () => {
@@ -140,15 +130,6 @@ export class GeminiService {
     }
 
     private async handleMessage(message: LiveServerMessage, sessionPromise: Promise<Session>) {
-        // Handle Audio Output
-        const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-        if (audioData && this.outputAudioContext && this.outputNode) {
-            this.playAudio(audioData);
-        }
-
-        // Handle Transcriptions (if any - model doesn't always send transcription with audio modality only, but helpful for debugging)
-        // Note: For this app, we rely on tool calls for logic.
-
         // Handle Tool Calls
         const toolCall = message.toolCall;
         if (toolCall) {
@@ -184,23 +165,6 @@ export class GeminiService {
         }
     }
 
-    private async playAudio(base64Data: string) {
-        if (!this.outputAudioContext || !this.outputNode) return;
-
-        // Sync timing
-        this.nextStartTime = Math.max(this.nextStartTime, this.outputAudioContext.currentTime);
-
-        const audioBytes = decodeBase64(base64Data);
-        const buffer = await decodeAudioData(audioBytes, this.outputAudioContext, outputAudioContextOptions.sampleRate);
-
-        const source = this.outputAudioContext.createBufferSource();
-        source.buffer = buffer;
-        source.connect(this.outputNode);
-        source.start(this.nextStartTime);
-
-        this.nextStartTime += buffer.duration;
-    }
-
     async disconnect() {
         if (this.session) {
             // No explicit close method on session object in this SDK version usually, 
@@ -224,10 +188,6 @@ export class GeminiService {
         if (this.inputAudioContext) {
             await this.inputAudioContext.close();
             this.inputAudioContext = null;
-        }
-        if (this.outputAudioContext) {
-            await this.outputAudioContext.close();
-            this.outputAudioContext = null;
         }
     }
 }
