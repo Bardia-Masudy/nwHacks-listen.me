@@ -77,6 +77,11 @@ const AppContent: React.FC = () => {
         setError(null);
         setFinalTranscript("");
         setInterimTranscript("");
+
+        // Check if Web Speech API is available
+        const hasWebSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+        console.log('[App] Web Speech API available:', hasWebSpeech);
+
         try {
             geminiRef.current = new GeminiService({
                 onSuggestions: (words, category) => {
@@ -98,24 +103,55 @@ const AppContent: React.FC = () => {
                 onRejectWord: () => {
                     setSuggestionCtx(null);
                 },
-                onTranscriptUpdate: () => { },
+                onTranscriptUpdate: (text) => {
+                    // Always use Gemini transcription - works on all devices including Android
+                    console.log('[App] Gemini transcription received:', text);
+                    setFinalTranscript(prev => prev + text);
+                },
                 onError: (err) => setError(err)
             });
 
-            speechRef.current = new SpeechService(
-                (text, isFinal) => {
-                    if (isFinal) {
-                        setFinalTranscript(prev => prev ? prev + ". " + text : text);
-                        setInterimTranscript("");
-                    } else {
-                        setInterimTranscript(text);
-                    }
-                },
-                (err) => console.warn("Speech warning:", err)
-            );
+            // Try Web Speech API first (faster for iOS/some Android devices)
+            if (hasWebSpeech) {
+                try {
+                    speechRef.current = new SpeechService(
+                        (text, isFinal) => {
+                            if (isFinal) {
+                                setFinalTranscript(prev => prev ? prev + ". " + text : text);
+                                setInterimTranscript("");
+                            } else {
+                                setInterimTranscript(text);
+                            }
+                        },
+                        (err) => {
+                            console.warn("[App] Speech API error, falling back to Gemini:", err);
+                            // Don't show error to user, Gemini will handle transcription
+                        }
+                    );
+                    console.log('[App] Web Speech Service created');
+                } catch (e) {
+                    console.warn('[App] Failed to create Speech Service, will use Gemini:', e);
+                    speechRef.current = null;
+                }
+            } else {
+                console.log('[App] Web Speech not available, using Gemini transcription only');
+            }
 
-            await geminiRef.current.connect();
-            speechRef.current.start();
+            // Connect to Gemini with TEXT modality always enabled for universal transcription
+            // This ensures ALL devices (especially Android) get reliable transcription
+            await geminiRef.current.connect(true);
+
+            // Start Web Speech if available
+            if (speechRef.current) {
+                try {
+                    speechRef.current.start();
+                    console.log('[App] Web Speech started');
+                } catch (e) {
+                    console.warn('[App] Failed to start Web Speech, using Gemini only:', e);
+                    speechRef.current = null;
+                }
+            }
+
             setIsRecording(true);
         } catch (e) {
             setError("Failed to start session.");
@@ -308,7 +344,7 @@ const AppContent: React.FC = () => {
                                 </button>
                             </div>
 
-                            <div className="grid gap-3 md:gap-5">
+                            <div className="grid gap-3 md:gap-4">
                                 {suggestionCtx.words.map((word, idx) => (
                                     <motion.button
                                         key={`${word}-${idx}`}
@@ -318,14 +354,14 @@ const AppContent: React.FC = () => {
                                         whileHover={{ scale: 1.01, translateX: 4 }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => handleManualSelect(word, idx)}
-                                        className="group relative w-full text-left p-6 md:p-10 bg-white border border-slate-200 hover:border-blue-500 rounded-2xl md:rounded-[2rem] shadow-sm hover:shadow-xl transition-all duration-300 flex items-center justify-between overflow-hidden"
+                                        className="group relative w-full text-left p-4 md:p-6 bg-white border border-slate-200 hover:border-blue-500 rounded-xl md:rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 flex items-center justify-between overflow-hidden"
                                     >
-                                        <div className="absolute top-0 left-0 w-1.5 md:w-2 h-full bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                        <span className="text-2xl md:text-6xl font-black text-slate-900 group-hover:text-blue-600 tracking-tighter">
+                                        <div className="absolute top-0 left-0 w-1 md:w-1.5 h-full bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                        <span className="text-xl md:text-4xl font-black text-slate-900 group-hover:text-blue-600 tracking-tighter">
                                             {word}
                                         </span>
-                                        <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-slate-50 group-hover:bg-blue-600 flex items-center justify-center transition-all duration-300 shadow-inner">
-                                            <CheckCircle2 className="w-5 h-5 md:w-7 md:h-7 text-slate-300 group-hover:text-white transition-colors" />
+                                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-slate-50 group-hover:bg-blue-600 flex items-center justify-center transition-all duration-300 shadow-inner">
+                                            <CheckCircle2 className="w-4 h-4 md:w-6 md:h-6 text-slate-300 group-hover:text-white transition-colors" />
                                         </div>
                                     </motion.button>
                                 ))}
