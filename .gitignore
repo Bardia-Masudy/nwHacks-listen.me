@@ -11,10 +11,12 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+my_secrets.py
 
-#Editor directories and files
+# Editor directories and files
 .vscode/*
-!.vscode/extenstions.json
+!.vscode/extensions.json
 .idea
 .DS_Store
 *.suo
