@@ -20,6 +20,7 @@ const AppContent: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [finalTranscript, setFinalTranscript] = useState<string>("");
     const [interimTranscript, setInterimTranscript] = useState<string>("");
+    const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
 
     const transcript = finalTranscript + (finalTranscript && interimTranscript ? " " : "") + interimTranscript;
 
@@ -67,6 +68,11 @@ const AppContent: React.FC = () => {
         });
     }, []);
 
+    const showConfirmation = (word: string) => {
+        setConfirmationMessage(`Selected: ${word}`);
+        setTimeout(() => setConfirmationMessage(null), 2000);
+    };
+
     const handleStartSession = async () => {
         setError(null);
         setFinalTranscript("");
@@ -87,6 +93,7 @@ const AppContent: React.FC = () => {
                     setSuggestionCtx(null);
                     setFinalTranscript("");
                     setInterimTranscript("");
+                    showConfirmation(word);
                 },
                 onRejectWord: () => {
                     setSuggestionCtx(null);
@@ -140,6 +147,7 @@ const AppContent: React.FC = () => {
         setSuggestionCtx(null);
         setFinalTranscript("");
         setInterimTranscript("");
+        showConfirmation(word);
     };
 
     const handleSkip = () => {
@@ -329,6 +337,21 @@ const AppContent: React.FC = () => {
                     )}
                 </AnimatePresence>
             </main>
+
+            {/* Confirmation Toast */}
+            <AnimatePresence>
+                {confirmationMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3"
+                    >
+                        <CheckCircle2 className="w-5 h-5 text-green-400" />
+                        <span className="font-medium">{confirmationMessage}</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Fixed Bottom Action Bar */}
             <div className="bg-white/80 backdrop-blur-xl border-t border-slate-200 p-4 md:p-6 pb-8 md:pb-10 z-40 flex-shrink-0">
