@@ -1,6 +1,4 @@
-streamlit
-snowflake-connector-python
-sseclient-py
-requests
 fastapi
+google-generativeai
+python-dotenv
 uvicorn
