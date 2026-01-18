@@ -17,7 +17,11 @@ const AppContent: React.FC = () => {
     const [logs, setLogs] = useState<WordLog[]>([]);
     const [showReport, setShowReport] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [transcript, setTranscript] = useState<string>("");
+    const [finalTranscript, setFinalTranscript] = useState<string>("");
+    const [interimTranscript, setInterimTranscript] = useState<string>("");
+
+    // Derived state for display
+    const transcript = finalTranscript + (finalTranscript && interimTranscript ? " " : "") + interimTranscript;
 
     const geminiRef = useRef<GeminiService | null>(null);
     const speechRef = useRef<SpeechService | null>(null);
@@ -72,6 +76,8 @@ const AppContent: React.FC = () => {
 
     const handleStartSession = async () => {
         setError(null);
+        setFinalTranscript("");
+        setInterimTranscript("");
         try {
             geminiRef.current = new GeminiService({
                 onSuggestions: (words, category) => {
@@ -101,13 +107,10 @@ const AppContent: React.FC = () => {
             speechRef.current = new SpeechService(
                 (text, isFinal) => {
                     if (isFinal) {
-                        setTranscript(prev => prev ? prev + ". " + text : text);
+                        setFinalTranscript(prev => prev ? prev + ". " + text : text);
+                        setInterimTranscript("");
                     } else {
-                        // Option: Show interim results if desired, or just wait for final
-                        // For now, let's show interim to be responsive
-                        // We need a way to verify interim vs final in UI if we want to be fancy
-                        // But simpler is just:
-                        setTranscript(text);
+                        setInterimTranscript(text);
                     }
                 },
                 (err) => console.warn("Speech warning:", err)
