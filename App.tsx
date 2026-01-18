@@ -52,14 +52,14 @@ const AppContent: React.FC = () => {
     }).catch(console.error);
   }, []);
 
-  // Logic for implicit split (50/40/10)
-  // This is called when new suggestions arrive replacing old ones, or session ends with pending suggestions
-  const processImplicitSplit = useCallback((ctx: SuggestionContext) => {
-    const weights = [0.5, 0.4, 0.1];
-    ctx.words.forEach((word, idx) => {
-      addLog(word, ctx.category, weights[idx] || 0.1, 'implicit_split');
-    });
-  }, []);
+    // Logic for implicit split (50/40/10)
+    // This is called when new suggestions arrive replacing old ones, or session ends with pending suggestions
+    const processImplicitSplit = useCallback((ctx: SuggestionContext) => {
+        const weights = [0.5, 0.4, 0.1];
+        ctx.words.forEach((word, idx) => {
+            addLog(word, ctx.category, weights[idx] || 0.1, 'implicit_split');
+        });
+    }, []);
 
   const handleStartSession = async () => {
     setError(null);
@@ -112,11 +112,11 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleManualSelect = (word: string, index: number) => {
-    if (!suggestionCtx) return;
-    addLog(word, suggestionCtx.category, 1.0, 'manual_click');
-    setSuggestionCtx(null); // Clear after selection
-  };
+    const handleManualSelect = (word: string, index: number) => {
+        if (!suggestionCtx) return;
+        addLog(word, suggestionCtx.category, 1.0, 'manual_click');
+        setSuggestionCtx(null); // Clear after selection
+    };
 
   const handleSkip = () => {
     if (suggestionCtx) {
@@ -125,12 +125,12 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (geminiRef.current) geminiRef.current.disconnect();
-    };
-  }, []);
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (geminiRef.current) geminiRef.current.disconnect();
+        };
+    }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-200">
@@ -173,20 +173,20 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* Introduction / Empty State */}
-        {!isRecording && !suggestionCtx && (
-          <div className="text-center py-20">
-            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-            </div>
-            <h2 className="text-3xl font-bold text-slate-800 mb-4">Ready to start therapy?</h2>
-            <p className="text-lg text-slate-600 max-w-md mx-auto mb-8">
-              Press the microphone button below to begin the session. Describe words you can't find, and I will help you.
-            </p>
-          </div>
-        )}
+                {/* Introduction / Empty State */}
+                {!isRecording && !suggestionCtx && (
+                    <div className="text-center py-20">
+                        <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                        </div>
+                        <h2 className="text-3xl font-bold text-slate-800 mb-4">Ready to start therapy?</h2>
+                        <p className="text-lg text-slate-600 max-w-md mx-auto mb-8">
+                            Press the microphone button below to begin the session. Describe words you can't find, and I will help you.
+                        </p>
+                    </div>
+                )}
 
         {/* Active Suggestions */}
         {suggestionCtx && (
@@ -226,12 +226,12 @@ const AppContent: React.FC = () => {
         )}
       </main>
 
-      {/* Floating Action Bar (Sticky Bottom) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-slate-200 p-6 z-20">
-        <div className="max-w-md mx-auto flex items-center justify-center">
-          <button
-            onClick={isRecording ? handleStopSession : handleStartSession}
-            className={`
+            {/* Floating Action Bar (Sticky Bottom) */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-slate-200 p-6 z-20">
+                <div className="max-w-md mx-auto flex items-center justify-center">
+                    <button
+                        onClick={isRecording ? handleStopSession : handleStartSession}
+                        className={`
               relative flex items-center justify-center w-20 h-20 rounded-full shadow-lg transition-all duration-300
               ${isRecording
                 ? 'bg-red-500 hover:bg-red-600 ring-4 ring-red-200 animate-pulse'
@@ -251,12 +251,12 @@ const AppContent: React.FC = () => {
         </p>
       </div>
 
-      {/* Report Modal */}
-      {showReport && (
-        <ReportView logs={logs} onClose={() => setShowReport(false)} />
-      )}
-    </div>
-  );
+            {/* Report Modal */}
+            {showReport && (
+                <ReportView logs={logs} onClose={() => setShowReport(false)} />
+            )}
+        </div>
+    );
 };
 
 // Wrapper to provide Auth Context
