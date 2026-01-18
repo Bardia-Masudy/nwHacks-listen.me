@@ -174,8 +174,8 @@ const AppContent: React.FC = () => {
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         {/* Logo */}
-                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                        <div className="w-10 h-10 flex items-center justify-center">
+                            <img src="/mascot-logo.png" alt="Mascot Logo" className="w-full h-full object-contain" />
                         </div>
                         <h1 className="text-xl font-bold tracking-tight text-slate-800">Anomia Aid</h1>
                     </div>
@@ -210,10 +210,8 @@ const AppContent: React.FC = () => {
                 {/* Introduction / Empty State */}
                 {!isRecording && !suggestionCtx && (
                     <div className="text-center py-20">
-                        <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
+                        <div className="w-32 h-32 flex items-center justify-center mx-auto mb-6">
+                            <img src="/mascot-logo.png" alt="Anomia Aid Mascot" className="w-full h-full object-contain drop-shadow-lg" />
                         </div>
                         <h2 className="text-3xl font-bold text-slate-800 mb-4">Ready to find your words?</h2>
                         <p className="text-lg text-slate-600 max-w-md mx-auto mb-8">
@@ -225,8 +223,44 @@ const AppContent: React.FC = () => {
                 {/* Live Transcript (Center Screen) */}
                 {isRecording && !suggestionCtx && (
                     <div className="flex flex-col items-center justify-center py-10 min-h-[40vh] animate-fade-in-up">
-                        <div className="mb-8">
-                            <div className="w-4 h-4 bg-red-500 rounded-full animate-ping" />
+                        <div className="mb-8 relative h-32 w-32 flex items-center justify-center">
+                            {interimTranscript ? (
+                                // User Speaking: Bouncing Logo (No dots)
+                                <>
+                                    <style>
+                                        {`
+                                          @keyframes bounce-subtle {
+                                            0%, 100% { transform: translateY(0); }
+                                            50% { transform: translateY(-10px); }
+                                          }
+                                        `}
+                                    </style>
+                                    <div className="w-full h-full" style={{ animation: 'bounce-subtle 1.5s infinite ease-in-out' }}>
+                                        <img src="/mascot-logo.png" alt="Listening" className="w-full h-full object-contain" />
+                                    </div>
+                                </>
+                            ) : (
+                                // User Silent: Eating Animation (With dots)
+                                <>
+                                    <style>
+                                        {`
+                                          @keyframes eat-dots {
+                                            0% { transform: translateX(0) scale(1); opacity: 1; }
+                                            90% { transform: translateX(-50px) scale(0.8); opacity: 1; }
+                                            100% { transform: translateX(-60px) scale(0); opacity: 0; }
+                                          }
+                                        `}
+                                    </style>
+                                    <div className="w-full h-full relative z-10">
+                                        <img src="/mascot-eating.png" alt="Waiting" className="w-full h-full object-contain" />
+                                    </div>
+                                    <div className="absolute top-1/2 left-[90%] -translate-y-1/2 flex">
+                                        <div className="w-3 h-3 bg-blue-400 rounded-full mx-1" style={{ animation: 'eat-dots 1.5s infinite linear', animationDelay: '0s' }} />
+                                        <div className="w-3 h-3 bg-blue-500 rounded-full mx-1" style={{ animation: 'eat-dots 1.5s infinite linear', animationDelay: '0.5s' }} />
+                                        <div className="w-3 h-3 bg-blue-600 rounded-full mx-1" style={{ animation: 'eat-dots 1.5s infinite linear', animationDelay: '1.0s' }} />
+                                    </div>
+                                </>
+                            )}
                         </div>
                         {transcript ? (
                             <p className="text-3xl md:text-4xl font-medium text-slate-700 text-center max-w-2xl leading-relaxed tracking-tight">
