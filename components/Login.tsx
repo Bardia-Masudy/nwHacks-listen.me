@@ -85,50 +85,50 @@ const Login: React.FC = () => {
             >
                 <div className="bg-white/80 backdrop-blur-2xl border border-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden">
                     <div className="p-8 md:p-12">
-                        <div className="flex flex-col items-center mb-10">
+                        <div className="flex flex-col items-center mb-6 md:mb-10">
                             <motion.div
                                 whileHover={{ scale: 1.05, rotate: 5 }}
-                                className="w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-blue-500/20"
+                                className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6 shadow-xl shadow-blue-500/20"
                             >
-                                <Mic className="w-8 h-8 text-white" />
+                                <Mic className="w-6 h-6 md:w-8 md:h-8 text-white" />
                             </motion.div>
-                            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+                            <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
                                 {isSignUp ? 'Join Listen Me' : 'Welcome to Listen Me'}
                             </h2>
-                            <p className="text-slate-500 text-center text-sm font-medium max-w-[280px]">
+                            <p className="text-slate-500 text-center text-xs md:text-sm font-medium max-w-[280px]">
                                 {isSignUp
                                     ? 'Start your journey to better speech today.'
                                     : 'A specialized speech assistant for individuals with Anomia.'}
                             </p>
                         </div>
 
-                        <form onSubmit={handleEmailAuth} className="space-y-5">
-                            <div className="space-y-2">
+                        <form onSubmit={handleEmailAuth} className="space-y-4 md:space-y-5">
+                            <div className="space-y-1 md:space-y-2">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Email Address</label>
                                 <div className="relative group">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                                     <input
                                         type="email"
                                         placeholder="name@example.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
-                                        className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-12 pr-4 py-4 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 outline-none transition-all placeholder:text-slate-400 font-medium"
+                                        className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-10 md:pl-12 pr-4 py-3 md:py-4 rounded-xl md:rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 outline-none transition-all placeholder:text-slate-400 font-medium text-sm md:text-base"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-1 md:space-y-2">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Password</label>
                                 <div className="relative group">
-                                    <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                    <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                                     <input
                                         type="password"
                                         placeholder="••••••••"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
-                                        className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-12 pr-4 py-4 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 outline-none transition-all placeholder:text-slate-400 font-medium"
+                                        className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-10 md:pl-12 pr-4 py-3 md:py-4 rounded-xl md:rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 outline-none transition-all placeholder:text-slate-400 font-medium text-sm md:text-base"
                                     />
                                 </div>
                             </div>
