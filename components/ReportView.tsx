@@ -109,7 +109,7 @@ const ReportView: React.FC<ReportViewProps> = ({ logs, onClose }) => {
                                     <BarChart data={categoryData} layout="vertical" margin={{ left: 20 }}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                         <XAxis type="number" />
-                                        <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
+                                        <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 12 }} interval={0} />
                                         <Tooltip cursor={{ fill: '#f1f5f9' }} />
                                         <Bar dataKey="value" fill="#2563eb" radius={[0, 4, 4, 0]} />
                                     </BarChart>
