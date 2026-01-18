@@ -222,7 +222,7 @@ const AppContent: React.FC = () => {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="text-center py-16 md:py-24"
+                            className="flex flex-col items-center justify-center min-h-full py-12 md:py-0"
                         >
                             <div className="relative inline-block mb-8 md:mb-10">
                                 <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full"></div>
@@ -230,8 +230,8 @@ const AppContent: React.FC = () => {
                                     <Sparkles className="w-10 h-10 md:w-14 md:h-14 text-blue-600" />
                                 </div>
                             </div>
-                            <h2 className="text-2xl md:text-4xl font-extrabold text-slate-900 mb-3 md:mb-4 tracking-tight px-4">Ready to find your words?</h2>
-                            <p className="text-base md:text-xl text-slate-500 max-w-md mx-auto mb-8 md:mb-10 leading-relaxed px-6">
+                            <h2 className="text-2xl md:text-4xl font-extrabold text-slate-900 mb-3 md:mb-4 tracking-tight px-4 text-center">Ready to find your words?</h2>
+                            <p className="text-base md:text-xl text-slate-500 max-w-md mx-auto mb-8 md:mb-10 leading-relaxed px-6 text-center">
                                 Start a session and I'll listen for pauses or struggles to offer helpful suggestions.
                             </p>
                         </motion.div>
