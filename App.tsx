@@ -1,37 +1,56 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { GeminiService } from './services/gemini';
+import { getAllLogsFromDB, addLogToDB } from './services/db';
 import { WordLog, SuggestionContext } from './types';
 import ReportView from './components/ReportView';
 
-const App: React.FC = () => {
-    const [isRecording, setIsRecording] = useState(false);
-    const [suggestionCtx, setSuggestionCtx] = useState<SuggestionContext | null>(null);
-    const [logs, setLogs] = useState<WordLog[]>([]);
-    const [showReport, setShowReport] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Login from './components/Login';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from './services/firebase';
 
-    const geminiRef = useRef<GeminiService | null>(null);
-    const suggestionCtxRef = useRef<SuggestionContext | null>(null);
+const AppContent: React.FC = () => {
+  const { user, signOut } = useAuth();
+  const [isRecording, setIsRecording] = useState(false);
+  const [suggestionCtx, setSuggestionCtx] = useState<SuggestionContext | null>(null);
+  const [logs, setLogs] = useState<WordLog[]>([]);
+  const [showReport, setShowReport] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    // Keep ref in sync with state
-    useEffect(() => {
-        suggestionCtxRef.current = suggestionCtx;
-    }, [suggestionCtx]);
+  const geminiRef = useRef<GeminiService | null>(null);
 
-    // Helper to log words
-    const addLog = (word: string, category: string, weight: number, method: WordLog['selectionMethod']) => {
-        setLogs(prev => [
-            ...prev,
-            {
-                id: crypto.randomUUID(),
-                word,
-                category,
-                weight,
-                timestamp: Date.now(),
-                selectionMethod: method
-            }
-        ]);
+  // Helper to log words
+  const addLog = (word: string, category: string, weight: number, method: WordLog['selectionMethod']) => {
+    const newLog: WordLog = {
+      id: crypto.randomUUID(),
+      word,
+      category,
+      weight,
+      timestamp: Date.now(),
+      selectionMethod: method
     };
+
+    // Save to Firestore if user is logged in
+    if (user) {
+      const logRef = doc(db, `users/${user.uid}/logs/${newLog.id}`);
+      setDoc(logRef, newLog).catch(console.error);
+    }
+
+    // Also save to local DB as backup/cache (optional, keeping for now)
+    addLogToDB(newLog).catch(console.error);
+
+    setLogs(prev => [
+      ...prev,
+      newLog
+    ]);
+  };
+
+  // Load logs on mount
+  useEffect(() => {
+    getAllLogsFromDB().then((savedLogs) => {
+      setLogs(savedLogs);
+    }).catch(console.error);
+  }, []);
 
     // Logic for implicit split (50/40/10)
     // This is called when new suggestions arrive replacing old ones, or session ends with pending suggestions
@@ -42,53 +61,56 @@ const App: React.FC = () => {
         });
     }, []);
 
-    const handleStartSession = async () => {
-        setError(null);
-        try {
-            geminiRef.current = new GeminiService({
-                onSuggestions: (words, category) => {
-                    // If previous suggestions existed and weren't selected, log them as implicit split
-                    const prev = suggestionCtxRef.current;
-                    if (prev) {
-                        processImplicitSplit(prev);
-                    }
-                    setSuggestionCtx({ words, category, timestamp: Date.now() });
-                },
-                onConfirmedWord: (word) => {
-                    // Find category from current context or default to 'Unknown'
-                    const current = suggestionCtxRef.current;
-                    const category = current?.category || 'General';
-                    addLog(word, category, 1.0, 'voice_confirmed');
-                    setSuggestionCtx(null); // Clear suggestions after success
-                },
-                onRejectWord: () => {
-                    setSuggestionCtx( () => {
-                        return null; // Clear suggestions after rejection
-                    }); 
-                },
-                onTranscriptUpdate: () => { }, // Not strictly using transcript text in UI to keep it simple
-                onError: (err) => setError(err)
-            });
-            await geminiRef.current.connect();
-            setIsRecording(true);
-        } catch (e) {
-            setError("Failed to start session.");
-        }
-    };
+  const handleStartSession = async () => {
+    setError(null);
+    try {
+      geminiRef.current = new GeminiService({
+        onSuggestions: (words, category) => {
+          // If previous suggestions existed and weren't selected, log them as implicit split
+          setSuggestionCtx(prev => {
+            if (prev) {
+              processImplicitSplit(prev);
+            }
+            return { words, category, timestamp: Date.now() };
+          });
+        },
+        onConfirmedWord: (word) => {
+          // Find category from current context or default to 'Unknown'
+          setSuggestionCtx(current => {
+            const category = current?.category || 'General';
+            addLog(word, category, 1.0, 'voice_confirmed');
+            return null; // Clear suggestions after success
+          });
+        },
+        onRejectWord: () => {
+          // Clear rejected words.
+          setSuggestionCtx(current => {
+            return null; // Clear suggestions
+          });
+        },
+        onTranscriptUpdate: () => { }, // Not strictly using transcript text in UI to keep it simple
+        onError: (err) => setError(err)
+      });
+      await geminiRef.current.connect();
+      setIsRecording(true);
+    } catch (e) {
+      setError("Failed to start session.");
+    }
+  };
 
-    const handleStopSession = async () => { //TODO
-        if (geminiRef.current) {
-            await geminiRef.current.disconnect();
-            geminiRef.current = null;
-        }
-        setIsRecording(false);
+  const handleStopSession = async () => { //TODO
+    if (geminiRef.current) {
+      await geminiRef.current.disconnect();
+      geminiRef.current = null;
+    }
+    setIsRecording(false);
 
-        // If there were pending suggestions, log them as split 
-        if (suggestionCtx) {
-            processImplicitSplit(suggestionCtx);
-            setSuggestionCtx(null);
-        }
-    };
+    // If there were pending suggestions, log them as split 
+    if (suggestionCtx) {
+      processImplicitSplit(suggestionCtx);
+      setSuggestionCtx(null);
+    }
+  };
 
     const handleManualSelect = (word: string, index: number) => {
         if (!suggestionCtx) return;
@@ -96,12 +118,12 @@ const App: React.FC = () => {
         setSuggestionCtx(null); // Clear after selection
     };
 
-    const handleSkip = () => {
-        if (suggestionCtx) {
-            processImplicitSplit(suggestionCtx);
-            setSuggestionCtx(null);
-        }
-    };
+  const handleSkip = () => {
+    if (suggestionCtx) {
+      processImplicitSplit(suggestionCtx);
+      setSuggestionCtx(null);
+    }
+  };
 
     // Cleanup on unmount
     useEffect(() => {
@@ -110,39 +132,46 @@ const App: React.FC = () => {
         };
     }, []);
 
-    return (
-        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-200">
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-200">
 
-            {/* Navigation / Header */}
-            <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                            </svg>
-                        </div>
-                        <h1 className="text-xl font-bold tracking-tight text-slate-800">Anomia Aid</h1>
-                    </div>
-                    <button
-                        onClick={() => setShowReport(true)}
-                        className="text-sm font-medium text-slate-600 hover:text-blue-600 transition flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-full"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                        View Report
-                    </button>
-                </div>
-            </header>
+      {/* Navigation / Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {/* Logo */}
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-800">Anomia Aid</h1>
+          </div>
 
-            <main className="max-w-3xl mx-auto px-4 py-8 pb-32">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowReport(true)}
+              className="text-sm font-medium text-slate-600 hover:text-blue-600 transition flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-full"
+            >
+              Report
+            </button>
+            <button
+              onClick={() => signOut()}
+              className="text-xs text-slate-400 hover:text-red-500 underline"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </header>
 
-                {/* Error State */}
-                {error && (
-                    <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r shadow-sm">
-                        <p className="font-bold">Connection Error</p>
-                        <p>{error}</p>
-                    </div>
-                )}
+      <main className="max-w-3xl mx-auto px-4 py-8 pb-32">
+
+        {/* Error State */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r shadow-sm">
+            <p className="font-bold">Connection Error</p>
+            <p>{error}</p>
+          </div>
+        )}
 
                 {/* Introduction / Empty State */}
                 {!isRecording && !suggestionCtx && (
@@ -159,43 +188,43 @@ const App: React.FC = () => {
                     </div>
                 )}
 
-                {/* Active Suggestions */}
-                {suggestionCtx && (
-                    <div className="animate-fade-in-up">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-slate-500 uppercase tracking-wider text-sm font-semibold">
-                                Detected Category: <span className="text-blue-600">{suggestionCtx.category}</span>
-                            </h3>
-                            <button
-                                onClick={handleSkip}
-                                className="text-slate-400 hover:text-slate-600 text-sm font-medium"
-                            >
-                                None of these
-                            </button>
-                        </div>
+        {/* Active Suggestions */}
+        {suggestionCtx && (
+          <div className="animate-fade-in-up">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-slate-500 uppercase tracking-wider text-sm font-semibold">
+                Detected Category: <span className="text-blue-600">{suggestionCtx.category}</span>
+              </h3>
+              <button
+                onClick={handleSkip}
+                className="text-slate-400 hover:text-slate-600 text-sm font-medium"
+              >
+                None of these
+              </button>
+            </div>
 
-                        <div className="grid gap-4">
-                            {suggestionCtx.words.map((word, idx) => (
-                                <button
-                                    key={`${word}-${idx}`}
-                                    onClick={() => handleManualSelect(word, idx)}
-                                    className="group relative w-full text-left p-8 bg-white border-2 border-slate-200 hover:border-blue-500 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-200 flex items-center justify-between"
-                                >
-                                    <span className="text-3xl md:text-4xl font-bold text-slate-800 group-hover:text-blue-700">
-                                        {word}
-                                    </span>
-                                    <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
-                                        <svg className="w-6 h-6 text-slate-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                        <p className="mt-8 text-center text-slate-400 text-sm">
-                            Tap a word to select it, or simply say it out loud.
-                        </p>
-                    </div>
-                )}
-            </main>
+            <div className="grid gap-4">
+              {suggestionCtx.words.map((word, idx) => (
+                <button
+                  key={`${word}-${idx}`}
+                  onClick={() => handleManualSelect(word, idx)}
+                  className="group relative w-full text-left p-8 bg-white border-2 border-slate-200 hover:border-blue-500 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-200 flex items-center justify-between"
+                >
+                  <span className="text-3xl md:text-4xl font-bold text-slate-800 group-hover:text-blue-700">
+                    {word}
+                  </span>
+                  <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                    <svg className="w-6 h-6 text-slate-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <p className="mt-8 text-center text-slate-400 text-sm">
+              Tap a word to select it, or simply say it out loud.
+            </p>
+          </div>
+        )}
+      </main>
 
             {/* Floating Action Bar (Sticky Bottom) */}
             <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-slate-200 p-6 z-20">
@@ -205,22 +234,22 @@ const App: React.FC = () => {
                         className={`
               relative flex items-center justify-center w-20 h-20 rounded-full shadow-lg transition-all duration-300
               ${isRecording
-                                ? 'bg-red-500 hover:bg-red-600 ring-4 ring-red-200 animate-pulse'
-                                : 'bg-blue-600 hover:bg-blue-700 ring-4 ring-blue-100 hover:scale-105'
-                            }
+                ? 'bg-red-500 hover:bg-red-600 ring-4 ring-red-200 animate-pulse'
+                : 'bg-blue-600 hover:bg-blue-700 ring-4 ring-blue-100 hover:scale-105'
+              }
             `}
-                    >
-                        {isRecording ? (
-                            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z" /></svg>
-                        ) : (
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                        )}
-                    </button>
-                </div>
-                <p className="text-center mt-3 text-sm font-medium text-slate-500">
-                    {isRecording ? "Listening..." : "Tap to Start"}
-                </p>
-            </div>
+          >
+            {isRecording ? (
+              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z" /></svg>
+            ) : (
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+            )}
+          </button>
+        </div>
+        <p className="text-center mt-3 text-sm font-medium text-slate-500">
+          {isRecording ? "Listening..." : "Tap to Start"}
+        </p>
+      </div>
 
             {/* Report Modal */}
             {showReport && (
@@ -228,6 +257,23 @@ const App: React.FC = () => {
             )}
         </div>
     );
+};
+
+// Wrapper to provide Auth Context
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppWrapper />
+    </AuthProvider>
+  );
+};
+
+const AppWrapper: React.FC = () => {
+  const { user } = useAuth();
+  if (!user) {
+    return <Login />;
+  }
+  return <AppContent />;
 };
 
 export default App;
