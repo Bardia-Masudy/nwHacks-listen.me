@@ -20,11 +20,8 @@ app.add_middleware(
 
 # Configure Gemini
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-else:
-    model = None
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 class SuggestionRequest(BaseModel):
     transcript: str
