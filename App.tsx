@@ -217,7 +217,7 @@ const AppContent: React.FC = () => {
                         </div>
                         <h2 className="text-3xl font-bold text-slate-800 mb-4">Ready to find your words?</h2>
                         <p className="text-lg text-slate-600 max-w-md mx-auto mb-8">
-                            Press the microphone button below to begin the session. Describe words you can't find, and I will help you.
+                            Press the microphone button below to start. I'll offer suggestions when you need them.
                         </p>
                     </div>
                 )}
