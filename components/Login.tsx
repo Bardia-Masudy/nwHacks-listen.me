@@ -1,6 +1,6 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Github, Mail, Mic, ShieldCheck, Sparkles } from 'lucide-react';
+import { Github, Mail, ShieldCheck, Sparkles } from 'lucide-react';
 import React, { useState } from 'react';
 import { auth, githubProvider, googleProvider } from '../services/firebase';
 
@@ -88,9 +88,9 @@ const Login: React.FC = () => {
                         <div className="flex flex-col items-center mb-6 md:mb-10">
                             <motion.div
                                 whileHover={{ scale: 1.05, rotate: 5 }}
-                                className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6 shadow-xl shadow-blue-500/20"
+                                className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl overflow-hidden mb-4 md:mb-6 shadow-xl shadow-blue-500/20"
                             >
-                                <Mic className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                                <img src="/listenme.png" alt="Listen Me Logo" className="w-full h-full object-cover" />
                             </motion.div>
                             <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
                                 {isSignUp ? 'Join Listen Me' : 'Welcome to Listen Me'}

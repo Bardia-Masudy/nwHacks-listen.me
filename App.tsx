@@ -190,9 +190,9 @@ const AppContent: React.FC = () => {
                     <div className="flex items-center gap-2 md:gap-3">
                         <motion.div
                             whileHover={{ rotate: 5, scale: 1.05 }}
-                            className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20"
+                            className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl overflow-hidden shadow-lg shadow-blue-500/20"
                         >
-                            <Mic className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                            <img src="/listenme.png" alt="Listen Me Logo" className="w-full h-full object-cover" />
                         </motion.div>
                         <h1 className="text-lg md:text-xl font-extrabold tracking-tight text-slate-900">Listen Me</h1>
                     </div>
